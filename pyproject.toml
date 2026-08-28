@@ -1,0 +1,16 @@
+[project]
+name = "valtiren-market-intelligence"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "beautifulsoup4>=4.15.0",
+    "httpx>=0.28.1",
+    "lxml>=6.1.2",
+    "mcp[cli]>=2.1.1",
+    "openpyxl>=3.1.5",
+    "pandas>=3.0.5",
+    "pydantic>=2.13.5",
+    "pymupdf>=1.28.2",
+    "python-dotenv>=1.2.3",
+    "requests>=2.34.2",
+]
