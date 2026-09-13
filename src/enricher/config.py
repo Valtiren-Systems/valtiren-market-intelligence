@@ -12,7 +12,7 @@ HEADERS = {
 REQUEST_TIMEOUT = 30
 
 
-ELECTRIC_CONTEXT_SIGNALS = [
+CONTEXT_SIGNALS = [
     "electric utility",
     "electric utilities",
     "electric power utility",

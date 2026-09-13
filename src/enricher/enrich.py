@@ -10,7 +10,7 @@ from .config import (
     TECHNOLOGY_SIGNALS,
     PROBLEM_SIGNALS,
     OPPORTUNITY_SIGNALS,
-    ELECTRIC_CONTEXT_SIGNALS,
+    CONTEXT_SIGNALS,
 )
 
 
@@ -83,7 +83,7 @@ def detect_electric_context(
     lower = text.lower()
     found = []
 
-    for keyword in ELECTRIC_CONTEXT_SIGNALS:
+    for keyword in CONTEXT_SIGNALS:
         if keyword.lower() in lower:
             found.append(keyword)
 

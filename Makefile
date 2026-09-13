@@ -12,3 +12,6 @@ dev:
 claude:
 	uv run mcp install src/mcp_server/server.py \
 		--with pandas
+
+analyze:
+	uv run src/pattern_observer/observer.py
