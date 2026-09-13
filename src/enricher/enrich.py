@@ -1,121 +1,25 @@
 import re
-import httpx
-
 from urllib.parse import urlparse
+
+import httpx
 from bs4 import BeautifulSoup
 
-HEADERS = {
-    "User-Agent": ("Mozilla/5.0 " "(compatible; ValtirenMarketIntelligence/1.0)")
-}
-
-
-TECHNOLOGY_SIGNALS = {
-    "GIS": [
-        "gis",
-        "geographic information system",
-        "geospatial",
-    ],
-    "Utility Network": [
-        "utility network",
-        "arcgis utility network",
-        "esri utility network",
-    ],
-    "SCADA": [
-        "scada",
-    ],
-    "AMI": [
-        "advanced metering infrastructure",
-        "ami",
-    ],
-    "IoT": [
-        "internet of things",
-        "iot",
-    ],
-    "AI": [
-        "artificial intelligence",
-        "machine learning",
-        "predictive analytics",
-    ],
-    "Cloud": [
-        "cloud migration",
-        "cloud platform",
-        "cloud infrastructure",
-    ],
-    "Asset Management": [
-        "asset management",
-        "asset inventory",
-    ],
-}
-
-
-PROBLEM_SIGNALS = {
-    "Aging Infrastructure": [
-        "aging infrastructure",
-        "ageing infrastructure",
-        "aging assets",
-        "aging equipment",
-    ],
-    "Legacy Systems": [
-        "legacy system",
-        "legacy systems",
-        "outdated system",
-        "obsolete system",
-    ],
-    "Data Integration": [
-        "data integration",
-        "system integration",
-        "data silos",
-        "siloed data",
-    ],
-    "Data Quality": [
-        "data quality",
-        "inaccurate data",
-        "incomplete data",
-        "inconsistent data",
-    ],
-    "Manual Processes": [
-        "manual process",
-        "manual processes",
-        "paper-based",
-        "manual data entry",
-    ],
-    "GIS Modernization": [
-        "gis modernization",
-        "gis migration",
-        "gis replacement",
-        "utility network migration",
-    ],
-    "Asset Management": [
-        "asset management",
-        "asset inventory",
-        "asset tracking",
-    ],
-    "Predictive Maintenance": [
-        "predictive maintenance",
-        "condition monitoring",
-        "predictive analytics",
-    ],
-    "Remote Monitoring": [
-        "remote monitoring",
-        "remote sensing",
-        "real-time monitoring",
-    ],
-    "Infrastructure Modernization": [
-        "infrastructure modernization",
-        "infrastructure upgrade",
-        "system modernization",
-    ],
-}
+from .config import (
+    HEADERS,
+    REQUEST_TIMEOUT,
+    TECHNOLOGY_SIGNALS,
+    PROBLEM_SIGNALS,
+    OPPORTUNITY_SIGNALS,
+    ELECTRIC_CONTEXT_SIGNALS,
+)
 
 
 def download_page(url: str) -> str:
-    """Download an existing source URL."""
-
     try:
         response = httpx.get(
             url,
             headers=HEADERS,
-            timeout=30,
+            timeout=REQUEST_TIMEOUT,
             follow_redirects=True,
         )
 
@@ -124,15 +28,11 @@ def download_page(url: str) -> str:
         return response.text
 
     except Exception as exc:
-
         print(f"  Download failed: {exc}")
-
         return ""
 
 
 def extract_text(html: str) -> str:
-    """Convert HTML into readable text."""
-
     if not html:
         return ""
 
@@ -163,40 +63,44 @@ def detect_signals(
     text: str,
     signals: dict[str, list[str]],
 ) -> list[str]:
-    """Detect known signals in source text."""
 
     lower = text.lower()
-
     found = []
 
     for category, keywords in signals.items():
-
         for keyword in keywords:
-
             if keyword.lower() in lower:
-
                 found.append(category)
-
                 break
 
     return found
 
 
-def extract_phone(
+def detect_electric_context(
     text: str,
-) -> str:
+) -> list[str]:
+
+    lower = text.lower()
+    found = []
+
+    for keyword in ELECTRIC_CONTEXT_SIGNALS:
+        if keyword.lower() in lower:
+            found.append(keyword)
+
+    return list(dict.fromkeys(found))
+
+
+def extract_phone(text: str) -> str:
 
     match = re.search(
-        r"(?:\+?1[\s.-]?)?" r"\(?\d{3}\)?[\s.-]" r"\d{3}[\s.-]\d{4}",
+        r"(?:\+?1[\s.-]?)?" r"\(?\d{3}\)?[\s.-]" r"\d{3}[\s.-]" r"\d{4}",
         text,
     )
 
     return match.group(0) if match else ""
 
 
-def extract_email(
-    text: str,
-) -> str:
+def extract_email(text: str) -> str:
 
     match = re.search(
         r"[A-Za-z0-9._%+-]+" r"@[A-Za-z0-9.-]+\.[A-Za-z]{2,}",
@@ -206,9 +110,7 @@ def extract_email(
     return match.group(0) if match else ""
 
 
-def extract_money(
-    text: str,
-) -> list[str]:
+def extract_money(text: str) -> list[str]:
 
     matches = re.findall(
         r"\$[\d,.]+" r"(?:\s*(?:million|billion|M|B))?",
@@ -219,19 +121,15 @@ def extract_money(
     return list(dict.fromkeys(matches))
 
 
-def extract_employee_count(
-    text: str,
-) -> str:
+def extract_employee_count(text: str) -> str:
 
     patterns = [
-        r"([\d,]+)\s+employees",
         r"([\d,]+)\s+employees",
         r"workforce\s+of\s+([\d,]+)",
         r"employs\s+([\d,]+)",
     ]
 
     for pattern in patterns:
-
         match = re.search(
             pattern,
             text,
@@ -244,18 +142,16 @@ def extract_employee_count(
     return ""
 
 
-def extract_customers(
-    text: str,
-) -> str:
+def extract_customers(text: str) -> str:
 
     patterns = [
         r"([\d,]+)\s+customers",
         r"serves\s+([\d,]+)",
         r"serving\s+([\d,]+)",
+        r"([\d,]+)\s+customers\s+served",
     ]
 
     for pattern in patterns:
-
         match = re.search(
             pattern,
             text,
@@ -268,24 +164,15 @@ def extract_customers(
     return ""
 
 
-def classify_size(
-    employees: str,
-) -> str:
+def classify_size(employees: str) -> str:
 
     if not employees:
         return ""
 
     try:
-
-        count = int(
-            employees.replace(
-                ",",
-                "",
-            )
-        )
+        count = int(employees.replace(",", ""))
 
     except ValueError:
-
         return ""
 
     if count < 100:
@@ -297,9 +184,7 @@ def classify_size(
     return "Large"
 
 
-def get_domain(
-    url: str,
-) -> str:
+def get_domain(url: str) -> str:
 
     if not url:
         return ""
@@ -311,6 +196,7 @@ def build_opportunity(
     row: dict,
     detected_problems: list[str],
     detected_technology: list[str],
+    detected_opportunities: list[str],
 ) -> str:
 
     existing = str(
@@ -324,19 +210,43 @@ def build_opportunity(
         return existing
 
     if "GIS Modernization" in detected_problems:
-        return "GIS modernization / " "utility network migration"
+        return "Electric utility GIS modernization " "and Utility Network"
 
-    if "Asset Management" in detected_problems:
-        return "Utility asset management " "and GIS"
+    if "Poor Spatial Data" in detected_problems:
+        return "Electric grid GIS and " "asset data modernization"
+
+    if "Grid Asset Management" in detected_technology:
+        return "Electric grid asset management " "and GIS"
 
     if "Predictive Maintenance" in detected_problems:
-        return "IoT / predictive " "maintenance"
+        return "AI / IoT predictive maintenance " "for grid assets"
+
+    if "Grid IoT" in detected_technology:
+        return "IoT grid monitoring " "and asset intelligence"
+
+    if "AI / Machine Learning" in detected_technology:
+        return "AI-powered electric grid " "analytics"
 
     if "Data Integration" in detected_problems:
-        return "Utility data integration " "and modernization"
+        return "Electric utility data integration " "and modernization"
 
-    if detected_technology:
-        return "Utility technology " "modernization"
+    if "Utility Data Platform" in detected_technology:
+        return "Electric utility data platform " "and integration"
+
+    if "SCADA" in detected_technology:
+        return "SCADA / GIS / grid data integration"
+
+    if "ADMS" in detected_technology:
+        return "ADMS / GIS / grid data integration"
+
+    if "Digital Twin" in detected_technology:
+        return "Electric grid digital twin"
+
+    if "Drone Inspection" in detected_technology:
+        return "AI / GIS electric infrastructure " "inspection"
+
+    if detected_opportunities:
+        return "Electric utility technology " "modernization"
 
     return ""
 
@@ -345,11 +255,12 @@ def calculate_score(
     row: dict,
     problems: list[str],
     technologies: list[str],
+    opportunities: list[str],
     money_signals: list[str],
+    electric_context: list[str],
 ) -> int:
 
     try:
-
         score = int(
             row.get(
                 "lead_score",
@@ -358,27 +269,30 @@ def calculate_score(
             or 0
         )
 
-    except ValueError:
-
+    except ValueError, TypeError:
         score = 0
 
-    # Strong problem evidence.
+    if electric_context:
+        score += 15
+
     score += min(
         len(problems) * 5,
+        25,
+    )
+
+    score += min(
+        len(technologies) * 3,
         20,
     )
 
-    # Technology signals.
     score += min(
-        len(technologies) * 3,
+        len(opportunities) * 5,
         15,
     )
 
-    # Financial signal.
     if money_signals:
         score += 10
 
-    # Procurement signal.
     procurement = str(
         row.get(
             "procurement_status",
@@ -403,9 +317,7 @@ def calculate_score(
     )
 
 
-def enrich_record(
-    row: dict,
-) -> dict:
+def enrich_record(row: dict) -> dict:
 
     company = str(
         row.get(
@@ -426,6 +338,9 @@ def enrich_record(
 
     html = download_page(source_url)
     text = extract_text(html)
+
+    electric_context = detect_electric_context(text)
+
     problems = detect_signals(
         text,
         PROBLEM_SIGNALS,
@@ -436,32 +351,45 @@ def enrich_record(
         TECHNOLOGY_SIGNALS,
     )
 
+    opportunities = detect_signals(
+        text,
+        OPPORTUNITY_SIGNALS,
+    )
+
     employees = extract_employee_count(text)
     customers = extract_customers(text)
     money_signals = extract_money(text)
     phone = extract_phone(text)
     email = extract_email(text)
     size = classify_size(employees)
+
     opportunity = build_opportunity(
         row,
         problems,
         technologies,
+        opportunities,
     )
+
     score = calculate_score(
         row,
         problems,
         technologies,
+        opportunities,
         money_signals,
+        electric_context,
     )
+
     result = {
         **row,
         "website_domain": get_domain(source_url),
+        "electric_context": "; ".join(electric_context),
         "employees": employees,
         "customers": customers,
         "size_enriched": size,
-        "detected_problems": ("; ".join(problems)),
-        "detected_technology": ("; ".join(technologies)),
-        "financial_signals": ("; ".join(money_signals)),
+        "detected_problems": "; ".join(problems),
+        "detected_technology": "; ".join(technologies),
+        "detected_opportunities": "; ".join(opportunities),
+        "financial_signals": "; ".join(money_signals),
         "phone": phone,
         "email": email,
         "valtiren_opportunity": opportunity,
@@ -469,9 +397,12 @@ def enrich_record(
         "source_status": ("scraped" if text else "failed"),
     }
 
+    print(f"  Electric context: " f"{len(electric_context)}")
+
     print(f"  Problems: {problems}")
     print(f"  Technology: {technologies}")
-    print(f"  Employees: {employees or 'unknown'}")
+    print(f"  Opportunities: {opportunities}")
+    print(f"  Employees: " f"{employees or 'unknown'}")
     print(f"  Score: {score}")
 
     return result
